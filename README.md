@@ -1,104 +1,78 @@
 # Failed Login Detector
 
-## Overview
+## About the Project
 
-This project implements a rule-based detection system for identifying suspicious authentication activity in log data. It focuses on detecting patterns consistent with brute-force attacks, such as multiple failed login attempts within a short time window.
+This project analyzes authentication logs and detects suspicious login activity that may indicate brute-force attacks or account abuse.
 
-The system processes structured log data and generates alerts based on configurable thresholds, simulating a simplified security monitoring workflow.
+The goal was to simulate a simplified security monitoring system that can identify abnormal behavior based on failed login patterns.
 
----
-
-## Key Features
-
-* Detection of suspicious IP addresses generating multiple failed login attempts
-* Detection of targeted user accounts under potential attack
-* Time-window based analysis (e.g. repeated failures within a defined interval)
-* Configurable detection parameters via `config.py`
-* Alert generation in both terminal output and structured CSV format
+Instead of using machine learning, the system relies on clear, explainable rules and produces structured alerts with a risk score and severity level.
 
 ---
 
-## Detection Logic
+## What This Project Detects
 
-The system applies rule-based analysis on authentication logs:
+The system identifies several types of suspicious behavior:
 
-* Aggregates failed login attempts
-* Groups events by IP address and username
-* Applies time-window constraints
-* Flags entities exceeding defined thresholds
+- Multiple failed login attempts from the same IP (possible brute-force attack)
+- Repeated failed attempts targeting the same user account
+- Password spraying (one IP trying many different usernames)
+- Attacks against privileged accounts such as `admin` or `root`
 
-**Example rule:**
+---
 
-> ≥ 5 failed login attempts within 5 minutes → flagged as suspicious
+## How It Works
+
+1. Reads authentication logs from a CSV file  
+2. Filters failed login attempts  
+3. Groups activity by IP and username  
+4. Applies detection rules within a time window (e.g. 5 minutes)  
+5. Assigns a risk score to each alert  
+6. Classifies alerts as `LOW`, `MEDIUM`, or `HIGH` severity  
+7. Saves results to a structured output file  
+
+---
+
+## Example Alert
+[HIGH] PASSWORD_SPRAYING | IP=203.0.113.50 | score=100 | failed=8
+
+
+---
+
+## Why This Project Matters
+
+This project demonstrates how simple log analysis can be used to detect suspicious behavior without complex tools.
+
+It focuses on:
+- understanding patterns in authentication data
+- building explainable detection logic
+- structuring a small but realistic security workflow
 
 ---
 
 ## Project Structure
-
-```
 failed-login-detector/
 │
 ├── data/
-│   ├── sample_logs.csv        # Input dataset (simulated logs)
-│   └── alerts.csv             # Generated alerts
+│ └── sample_logs.csv
 │
 ├── src/
-│   ├── main.py                # Core logic and execution
-│   └── config.py              # Detection parameters
+│ ├── config.py
+│ ├── data_loader.py
+│ ├── detectors.py
+│ └── main.py
 │
 ├── README.md
-├── requirements.txt
-```
-
----
-
-## Example Output
-
-```
-[ALERT] IP 192.168.1.30 → 8 failed attempts
-[ALERT] USER user1 → 8 failed attempts
-```
+└── requirements.txt
 
 ---
 
 ## Configuration
 
-Detection behavior is controlled via `config.py`:
+Detection thresholds are configurable in `config.py`.
 
+Example:
 ```python
-FAILED_THRESHOLD = 5
 TIME_WINDOW_MINUTES = 5
-```
-
-These values define the sensitivity of the detection rules and can be adjusted without modifying the core logic.
-
----
-
-## How to Run
-
-```
-python src/main.py
-```
-
----
-
-## Technical Notes
-
-* The project uses **pandas** for data processing and time-based filtering
-* Input data is simulated but structured to resemble real authentication logs
-* The detection approach is deterministic (rule-based), not machine learning-based
-
----
-
-## Use Case
-
-This project demonstrates how log analysis can be used to identify suspicious authentication behavior and simulate a basic intrusion detection mechanism.
-
----
-
-## Future Improvements
-
-* Real-time log ingestion and monitoring
-* Integration with alerting systems (e.g. email, Slack)
-* Visualization of attack patterns
-* Extension to anomaly detection techniques
+FAILED_THRESHOLD_IP = 5
+FAILED_THRESHOLD_USER = 5
