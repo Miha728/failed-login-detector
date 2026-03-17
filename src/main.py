@@ -1,102 +1,72 @@
+import logging
 import pandas as pd
 import config
+from data_loader import load_data, validate_data
+from detectors import detect_all_alerts
 
 
-def load_data(file_path):
-    df = pd.read_csv(file_path)
-    return df
+logging.basicConfig(
+    level=getattr(logging, config.LOG_LEVEL),
+    format=config.LOG_FORMAT
+)
+
+logger = logging.getLogger(__name__)
 
 
-def detect_suspicious_ips(df, threshold=5, window_minutes=5):
-    df = df.copy()
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
-    failed_df = df[df["status"] == "FAILED"]
+def save_alerts(alerts, output_file):
+    alerts_df = pd.DataFrame(alerts)
 
-    alerts = []
+    if alerts_df.empty:
+        alerts_df = pd.DataFrame(columns=[
+            "rule_name",
+            "entity_type",
+            "entity_value",
+            "window_start",
+            "window_end",
+            "failed_attempts",
+            "unique_users_targeted",
+            "country",
+            "hostname",
+            "risk_score",
+            "severity",
+            "reason",
+        ])
 
-    for ip in failed_df["ip_address"].unique():
-        ip_data = failed_df[failed_df["ip_address"] == ip].sort_values("timestamp")
-
-        for i in range(len(ip_data)):
-            start_time = ip_data.iloc[i]["timestamp"]
-            end_time = start_time + pd.Timedelta(minutes=window_minutes)
-
-            window = ip_data[
-                (ip_data["timestamp"] >= start_time)
-                & (ip_data["timestamp"] <= end_time)
-            ]
-
-            if len(window) >= threshold:
-                alerts.append({
-                    "type": "IP",
-                    "value": ip,
-                    "failed_attempts": len(window)
-                })
-                break
-
-    return alerts
+    alerts_df.to_csv(output_file, index=False)
+    logger.info("Alerts saved to %s", output_file)
+    return alerts_df
 
 
-def detect_suspicious_users(df, threshold=5, window_minutes=5):
-    df = df.copy()
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
-    failed_df = df[df["status"] == "FAILED"]
+def print_summary(df, alerts_df):
+    print("\n=== SUMMARY ===")
+    print(f"Total log events: {len(df)}")
+    print(f"Failed logins: {(df['status'] == 'FAILED').sum()}")
+    print(f"Alerts generated: {len(alerts_df)}")
 
-    alerts = []
-
-    for user in failed_df["username"].unique():
-        user_data = failed_df[failed_df["username"] == user].sort_values("timestamp")
-
-        for i in range(len(user_data)):
-            start_time = user_data.iloc[i]["timestamp"]
-            end_time = start_time + pd.Timedelta(minutes=window_minutes)
-
-            window = user_data[
-                (user_data["timestamp"] >= start_time)
-                & (user_data["timestamp"] <= end_time)
-            ]
-
-            if len(window) >= threshold:
-                alerts.append({
-                    "type": "USER",
-                    "value": user,
-                    "failed_attempts": len(window)
-                })
-                break
-
-    return alerts
+    if not alerts_df.empty:
+        print("\n=== ALERTS ===")
+        for _, row in alerts_df.iterrows():
+            print(
+                f"[{row['severity']}] {row['rule_name']} | "
+                f"{row['entity_type']}={row['entity_value']} | "
+                f"score={row['risk_score']} | "
+                f"failed={row['failed_attempts']} | "
+                f"reason={row['reason']}"
+            )
 
 
 def main():
-    file_path = "data/sample_logs.csv"
+    logger.info("Starting Failed Login Detector")
 
-    df = load_data(file_path)
+    df = load_data(config.INPUT_FILE)
+    df = validate_data(df)
 
-    print("=== DATA PREVIEW ===")
-    print(df.head())
+    alerts = detect_all_alerts(df)
+    alerts_df = save_alerts(alerts, config.OUTPUT_FILE)
 
-    ip_alerts = detect_suspicious_ips(
-        df,
-        threshold=config.FAILED_THRESHOLD,
-        window_minutes=config.TIME_WINDOW_MINUTES
-    )
+    print_summary(df, alerts_df)
 
-    user_alerts = detect_suspicious_users(
-        df,
-        threshold=config.FAILED_THRESHOLD,
-        window_minutes=config.TIME_WINDOW_MINUTES
-    )
-
-    all_alerts = ip_alerts + user_alerts
-
-    print("\n=== ALERTS ===")
-    for alert in all_alerts:
-        print(f"[ALERT] {alert['type']} {alert['value']} → {alert['failed_attempts']} failed attempts")
-
-    alerts_df = pd.DataFrame(all_alerts)
-    alerts_df.to_csv("data/alerts.csv", index=False)
-
-    print("\nAlerts saved to data/alerts.csv")
+    logger.info("Detection process finished successfully")
 
 
 if __name__ == "__main__":
