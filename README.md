@@ -2,19 +2,34 @@
 
 ## Overview
 
-This project analyzes authentication logs and detects suspicious login activity, such as multiple failed login attempts within a short time window.
+This project implements a rule-based detection system for identifying suspicious authentication activity in log data. It focuses on detecting patterns consistent with brute-force attacks, such as multiple failed login attempts within a short time window.
 
-It simulates a basic security monitoring system used to identify potential brute-force attacks.
+The system processes structured log data and generates alerts based on configurable thresholds, simulating a simplified security monitoring workflow.
 
 ---
 
-## Features
+## Key Features
 
-* Detects suspicious IP addresses based on failed login attempts
-* Detects suspicious user accounts under attack
-* Time-based detection (e.g. multiple failures within 5 minutes)
-* Configurable thresholds via `config.py`
-* Outputs alerts to both terminal and CSV file
+* Detection of suspicious IP addresses generating multiple failed login attempts
+* Detection of targeted user accounts under potential attack
+* Time-window based analysis (e.g. repeated failures within a defined interval)
+* Configurable detection parameters via `config.py`
+* Alert generation in both terminal output and structured CSV format
+
+---
+
+## Detection Logic
+
+The system applies rule-based analysis on authentication logs:
+
+* Aggregates failed login attempts
+* Groups events by IP address and username
+* Applies time-window constraints
+* Flags entities exceeding defined thresholds
+
+**Example rule:**
+
+> ≥ 5 failed login attempts within 5 minutes → flagged as suspicious
 
 ---
 
@@ -24,34 +39,16 @@ It simulates a basic security monitoring system used to identify potential brute
 failed-login-detector/
 │
 ├── data/
-│   ├── sample_logs.csv
-│   └── alerts.csv
+│   ├── sample_logs.csv        # Input dataset (simulated logs)
+│   └── alerts.csv             # Generated alerts
 │
 ├── src/
-│   ├── main.py
-│   └── config.py
+│   ├── main.py                # Core logic and execution
+│   └── config.py              # Detection parameters
 │
 ├── README.md
 ├── requirements.txt
 ```
-
----
-
-## How It Works
-
-1. The system reads authentication logs from a CSV file
-2. Filters failed login attempts
-3. Groups activity by IP and username
-4. Applies detection rules:
-
-   * X failed attempts within Y minutes → alert
-5. Outputs detected alerts
-
----
-
-## Example Detection Rule
-
-* 5 failed login attempts within 5 minutes → flagged as suspicious
 
 ---
 
@@ -66,25 +63,14 @@ failed-login-detector/
 
 ## Configuration
 
-You can adjust detection sensitivity in `config.py`:
+Detection behavior is controlled via `config.py`:
 
 ```python
 FAILED_THRESHOLD = 5
 TIME_WINDOW_MINUTES = 5
 ```
 
----
-
-## Requirements
-
-* Python 3.x
-* pandas
-
-Install dependencies:
-
-```
-pip install pandas
-```
+These values define the sensitivity of the detection rules and can be adjusted without modifying the core logic.
 
 ---
 
@@ -96,15 +82,23 @@ python src/main.py
 
 ---
 
+## Technical Notes
+
+* The project uses **pandas** for data processing and time-based filtering
+* Input data is simulated but structured to resemble real authentication logs
+* The detection approach is deterministic (rule-based), not machine learning-based
+
+---
+
 ## Use Case
 
-This project simulates a simplified intrusion detection mechanism and demonstrates how log analysis can be used to identify suspicious authentication patterns.
+This project demonstrates how log analysis can be used to identify suspicious authentication behavior and simulate a basic intrusion detection mechanism.
 
 ---
 
 ## Future Improvements
 
-* Real-time log monitoring
-* Integration with alerting systems (email, Slack)
-* Visualization dashboard
-* Machine learning-based anomaly detection
+* Real-time log ingestion and monitoring
+* Integration with alerting systems (e.g. email, Slack)
+* Visualization of attack patterns
+* Extension to anomaly detection techniques
